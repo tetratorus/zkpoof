@@ -3,6 +3,8 @@ const BN = require('bn.js')
 const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
 const { multilinearExtension } = require('../src/mle')
+const { getDAG } = require('../src/boolean')
+const { H } = require('../src/sumcheck')
 const ec = utils.ec
 describe('Basic', function () {
   describe('utils', function () {
@@ -30,10 +32,25 @@ describe('Chapter 1', function () {
       // select random value
       const r = utils.randomScalar()
       const AliceV = AliceHash.evaluate(r)
-      const BobFile = 'asdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnm'
+      const BobFile = AliceFile
+      assert(BobFile === AliceFile)
       const BobHash = new Hash(stringToCoefficients(BobFile))
       const BobV = BobHash.evaluate(r)
       assert(AliceV.cmp(BobV) === 0)
+    })
+    it('should check that Alice and Bob dont have the same hash if file differs by just one char', function () {
+      // 128 char file
+      const AliceFile = 'asdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnm'
+      const AliceHash = new Hash(stringToCoefficients(AliceFile))
+      // select random value
+      const r = utils.randomScalar()
+      const AliceV = AliceHash.evaluate(r)
+      const randomIndex = Math.floor(Math.random() * AliceFile.length)
+      const BobFile = AliceFile.split('').map((char, i) => i === randomIndex ? String.fromCharCode(char.charCodeAt(0) + 1) : char).join('')
+      assert(BobFile !== AliceFile)
+      const BobHash = new Hash(stringToCoefficients(BobFile))
+      const BobV = BobHash.evaluate(r)
+      assert(AliceV.cmp(BobV) !== 0)
     })
   })
 })
@@ -43,13 +60,42 @@ describe('Chapter 3', function () {
       const fn = function (arrOfBooleans) {
         return new BN(arrOfBooleans.join(''), 2)
       }
-      const rand = Math.floor(Math.random() * 100000)
+      const rand = Math.floor(Math.random() * 10000)
       const booleanInput = new BN(rand).toString(2).split('')
       const fTilda = multilinearExtension(fn, booleanInput.length)
       const mleEval = fTilda(booleanInput)
       const fnEval = fn(booleanInput)
-      // console.log(mleEval, fnEval)
       assert(mleEval.cmp(fnEval) === 0)
+    })
+  })
+})
+describe('Chapter 4', function () {
+  describe('sum-check protocol', function () {
+    it('should sum', function () {
+      const g = function (booleanArr) {
+        if (booleanArr[booleanArr.length - 1] === 0) {
+          return new BN(1)
+        } else {
+          return new BN(0)
+        }
+      }
+      const rand = Math.floor(Math.random() * 10) + 1
+      const summation = new BN(2).pow(new BN(rand - 1))
+      const res = H(g, rand)
+      assert(res.cmp(summation) === 0)
+    })
+  })
+  describe('DAG', function () {
+    it('should create a DAG from a tree', function () {
+      const tree = {
+        root: { gate: 'AND', inputs: [{ gate: 'NOT', inputs: [{}] }, { gate: 'OR', inputs: [{}, {}] }] }
+      }
+      const dag = getDAG(tree)
+      assert(dag.leafs[0].output === 1)
+      const notGate = dag.nodes[dag.leafs[0].output]
+      assert(notGate.gate === 'NOT')
+      const rootGate = dag.nodes[notGate.output]
+      assert(rootGate.gate === 'AND' && rootGate.nodeIndex === 0)
     })
   })
 })
