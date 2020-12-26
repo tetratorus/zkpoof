@@ -6,9 +6,17 @@ function multilinearExtension (f, v) {
   return function (x) {
     let sum = new BN(0)
     for (let w = new BN(0); w.cmp(new BN(2).pow(new BN(v))) === -1; w = w.add(new BN(1))) {
-      sum = sum.add(f(w.toString(2).split('').map(s => parseInt(s))).mul(Xw(w.toString(2).padStart(v, '0').split('').map(s => parseInt(s)), x, v)))
+      sum = sum.add(f(bnToBoolArr(w, v)).mul(Xw(bnToBoolArr(w, v), x, v)))
     }
     return sum
+  }
+}
+
+function bnToBoolArr (bn, boolArrLength) {
+  if (boolArrLength) {
+    return bn.toString(2).padStart(boolArrLength, '0').split('').map(s => parseInt(s))
+  } else {
+    return bn.toString(2).split('').map(s => parseInt(s))
   }
 }
 

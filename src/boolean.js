@@ -25,23 +25,23 @@ function getDAG (tree) {
   queue.push(tree.root)
   while (queue.length > 0) {
     const current = queue.shift()
-    if (current.inputs === undefined) {
+    if (current.input === undefined) {
       leafs.push(current)
     } else {
-      for (let i = 0; i < current.inputs.length; i++) {
+      for (let i = 0; i < current.input.length; i++) {
         nodeIndex++
         const node = {
-          ...current.inputs[i],
+          ...current.input[i],
           output: current.nodeIndex,
           nodeIndex
         }
         nodes[nodeIndex] = node
         queue.push(node)
       }
-      delete current.inputs
+      delete current.input
     }
   }
-  delete nodes[0].inputs
+  delete nodes[0].input
   return { leafs, nodes }
 }
 
