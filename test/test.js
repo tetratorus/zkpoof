@@ -4,7 +4,7 @@ const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
 const { multilinearExtension } = require('../src/mle')
 // const { getDAG } = require('../src/boolean')
-const { H, s } = require('../src/sumcheck')
+const { H, s, x, vecFill } = require('../src/sumcheck')
 const ec = utils.ec
 describe('Basic', function () {
   describe('utils', function () {
@@ -127,33 +127,111 @@ describe('Chapter 4', function () {
     const res = H(g, rand, prime)
 
     const s1 = s(g, rand, prime)
-    const x1Input0 = Array.from(new Array(rand)).map(x => null)
-    x1Input0[0] = 0
-    const x1Input1 = Array.from(new Array(rand)).map(x => null)
-    x1Input1[0] = 1
-    // console.log('X1INPUTS', x1Input0, x1Input1)
-    // console.log(res, summation)
-    // console.log('S10', s1(x1Input0))
-    // console.log('S11', s1(x1Input1))
-    // console.log(res)
-    assert(res.cmp(s1(x1Input0).add(s1(x1Input1)).umod(new BN(prime))) === 0)
+    assert(res.cmp(s1(vecFill(rand, x(0))).add(s1(vecFill(rand, x(1)))).umod(new BN(prime))) === 0)
   })
   it('should simulate sum-check protocol', function () {
-    console.log('TODO')
+    const prime = Math.floor(Math.random() * 100000)
+    const dimensions = 5
+    const g = function (inputArr) {
+      let sum = new BN(0)
+      inputArr.map(elem => {
+        sum = sum.add(new BN(elem))
+        return null
+      })
+      return sum
+    }
+
+    // Round 1
+    // prover
+    const sum = H(g, dimensions, prime)
+    const s1 = s(g, dimensions, prime)
+
+    // verifier
+    const g1 = s1
+    assert(
+      g1(x(0, null, null, null, null))
+        .add(g1(x(1, null, null, null, null)))
+        .umod(new BN(prime))
+        .cmp(sum) === 0)
+    const r1 = new BN(Math.floor(Math.random() * 100000)).umod(new BN(prime))
+
+    // Round 2
+    // prover
+    const s2 = function (variableArray) {
+      const fixedValues = [r1.toNumber()]
+      return s(g, dimensions, prime).call(this, fixedValues.concat(variableArray))
+    }
+
+    // verifier
+    const g2 = s2
+    assert(
+      g2(x(0, null, null, null))
+        .add(g2(x(1, null, null, null)))
+        .umod(new BN(prime))
+        .cmp(g1(x(r1, null, null, null, null))) === 0
+    )
+    const r2 = new BN(Math.floor(Math.random() * 100000)).umod(new BN(prime))
+
+    // Round 3
+    // prover
+    const s3 = function (variableArray) {
+      const fixedValues = [r1.toNumber(), r2.toNumber()]
+      return s(g, dimensions, prime).call(this, fixedValues.concat(variableArray))
+    }
+
+    // verifier
+    const g3 = s3
+    assert(
+      g3(x(0, null, null))
+        .add(g3(x(1, null, null)))
+        .umod(new BN(prime))
+        .cmp(g2(x(r2, null, null, null))) === 0
+    )
+    const r3 = new BN(Math.floor(Math.random() * 100000)).umod(new BN(prime))
+
+    // Round 4
+    // prover
+    const s4 = function (variableArray) {
+      const fixedValues = [r1.toNumber(), r2.toNumber(), r3.toNumber()]
+      return s(g, dimensions, prime).call(this, fixedValues.concat(variableArray))
+    }
+
+    // verifier
+    const g4 = s4
+    assert(
+      g4(x(0, null))
+        .add(g4(x(1, null)))
+        .umod(new BN(prime))
+        .cmp(g3(x(r3, null, null))) === 0
+    )
+    const r4 = new BN(Math.floor(Math.random() * 100000)).umod(new BN(prime))
+
+    // Round 5 (final round)
+    // prover
+    const s5 = function (variableArray) {
+      const fixedValues = [r1.toNumber(), r2.toNumber(), r3.toNumber(), r4.toNumber()]
+      return s(g, dimensions, prime).call(this, fixedValues.concat(variableArray))
+    }
+
+    // verifier
+    const g5 = s5
+    assert(
+      g5(x(0))
+        .add(g5(x(1)))
+        .umod(new BN(prime))
+        .cmp(g4(x(r4, null))) === 0
+    )
+    const r5 = new BN(Math.floor(Math.random() * 100000)).umod(new BN(prime))
+
+    // oracle check
+    const oracle = function (variableArray) {
+      return g(variableArray)
+    }
+
+    assert(
+      oracle([r1.toNumber(), r2.toNumber(), r3.toNumber(), r4.toNumber(), r5.toNumber()])
+        .umod(new BN(prime))
+        .cmp(g5(x(r5)).umod(new BN(prime))) === 0
+    )
   })
-  // describe('DAG', function () {
-  //   it('should create a DAG from a tree', function () {
-  //     const tree = {
-  //       root: { gate: 'AND', input: [{ gate: 'NOT', input: [{}] }, { gate: 'OR', input: [{}, {}] }] }
-  //     }
-  //     const dag = getDAG(tree)
-  //     assert(dag.leafs[0].output === 1)
-  //     const notGate = dag.nodes[dag.leafs[0].output]
-  //     assert(notGate.gate === 'NOT')
-  //     const rootGate = dag.nodes[notGate.output]
-  //     assert(rootGate.gate === 'AND' && rootGate.nodeIndex === 0)
-  //     // console.log(JSON.stringify(dag, null, 2))
-  //   })
-  // })
-  describe('full sum-check', function () {})
 })

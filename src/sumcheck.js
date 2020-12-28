@@ -1,5 +1,23 @@
 const BN = require('bn.js')
 
+function vecFill (len, inputs, padLeft = false) {
+  const arr = Array.from(new Array(len)).map(x => null)
+  if (padLeft) {
+    for (let i = 0; i < inputs.length; i++) {
+      arr[arr.length - 1 - i] = inputs[inputs.length - 1 - i]
+    }
+  } else {
+    for (let i = 0; i < inputs.length; i++) {
+      arr[i] = inputs[i]
+    }
+  }
+  return arr
+}
+
+function x () {
+  return Array.prototype.slice.call(arguments)
+}
+
 function H (g, v, prime) {
   let sum = new BN(0)
   for (let i = new BN(0); i.cmp(new BN(2).pow(new BN(v))) !== 0; i = i.add(new BN(1))) {
@@ -23,7 +41,6 @@ function s (g, v, prime) {
     let subsum = new BN(0)
     for (let c = new BN(0); c.cmp(new BN(2).pow(new BN(v - variates.length))) !== 0; c = c.add(new BN(1))) {
       const nonVariates = c.toString(2)
-        .padStart(v, '0')
         .split('')
         .map((s) => parseInt(s))
 
@@ -65,6 +82,8 @@ function s (g, v, prime) {
 
 module.exports = {
   H,
-  s
+  s,
+  x,
+  vecFill
   // getArithmeticCircuitDAG
 }
