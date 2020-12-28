@@ -3,8 +3,8 @@ const BN = require('bn.js')
 const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
 const { multilinearExtension } = require('../src/mle')
-const { getDAG } = require('../src/boolean')
-const { H } = require('../src/sumcheck')
+// const { getDAG } = require('../src/boolean')
+const { H, s } = require('../src/sumcheck')
 const ec = utils.ec
 describe('Basic', function () {
   describe('utils', function () {
@@ -14,7 +14,14 @@ describe('Basic', function () {
     it('should return random group element in the range of secp256k1 group order', function () {
       const pt = utils.randomPoint()
       // secp256k1 equation: y^3 = x^2 + 7
-      assert(pt.x.pow(new BN(3)).umod(ec.curve.p).add(new BN(7)).umod(ec.curve.p).cmp(pt.y.pow(new BN(2)).umod(ec.curve.p)) === 0)
+      assert(
+        pt.x
+          .pow(new BN(3))
+          .umod(ec.curve.p)
+          .add(new BN(7))
+          .umod(ec.curve.p)
+          .cmp(pt.y.pow(new BN(2)).umod(ec.curve.p)) === 0
+      )
     })
   })
 })
@@ -23,11 +30,18 @@ describe('Chapter 1', function () {
     it('should hash', function () {
       const coefficients = [1, 1, 1, 1, 1, 1, 1, 1, 1]
       const H = new Hash(coefficients)
-      assert(H.evaluate(2).toString(16) === new BN(2).pow(new BN(coefficients.length + 1)).sub(new BN(2)).toString(16))
+      assert(
+        H.evaluate(2).toString(16) ===
+          new BN(2)
+            .pow(new BN(coefficients.length + 1))
+            .sub(new BN(2))
+            .toString(16)
+      )
     })
     it('should check that Alice and Bob have the same hash if they have the same file', function () {
       // 128 char file
-      const AliceFile = 'asdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnm'
+      const AliceFile =
+        'asdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnm'
       const AliceHash = new Hash(stringToCoefficients(AliceFile))
       // select random value
       const r = utils.randomScalar()
@@ -40,13 +54,16 @@ describe('Chapter 1', function () {
     })
     it('should check that Alice and Bob dont have the same hash if file differs by just one char', function () {
       // 128 char file
-      const AliceFile = 'asdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnm'
+      const AliceFile =
+        'asdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnmasdfghjklzxcvbnm'
       const AliceHash = new Hash(stringToCoefficients(AliceFile))
       // select random value
       const r = utils.randomScalar()
       const AliceV = AliceHash.evaluate(r)
       const randomIndex = Math.floor(Math.random() * AliceFile.length)
-      const BobFile = AliceFile.split('').map((char, i) => i === randomIndex ? String.fromCharCode(char.charCodeAt(0) + 1) : char).join('')
+      const BobFile = AliceFile.split('')
+        .map((char, i) => (i === randomIndex ? String.fromCharCode(char.charCodeAt(0) + 1) : char))
+        .join('')
       assert(BobFile !== AliceFile)
       const BobHash = new Hash(stringToCoefficients(BobFile))
       const BobV = BobHash.evaluate(r)
@@ -86,11 +103,43 @@ describe('Chapter 4', function () {
       const rand = Math.floor(Math.random() * 10) + 1
       // sumcheck should be equal to exactly half of range respresented by the boolean array
       // multiplied by the random selected field element randomFE
-      const summation = new BN(2).pow(new BN(rand - 1)).mul(randomFE).mod(new BN(prime))
+      const summation = new BN(2)
+        .pow(new BN(rand - 1))
+        .mul(randomFE)
+        .mod(new BN(prime))
       const res = H(g, rand, prime)
       // console.log(res, summation)
       assert(res.cmp(summation) === 0)
     })
+  })
+  it('should subsum, H = s_1(0) + s_1(1)', function () {
+    const prime = Math.floor(Math.random() * 100000)
+    const randomFE = new BN(Math.floor(Math.random() * prime))
+    const g = function (booleanArr) {
+      // if input is even, return 1, else 0
+      if (booleanArr[booleanArr.length - 1] === 0) {
+        return randomFE
+      } else {
+        return new BN(0)
+      }
+    }
+    const rand = Math.floor(Math.random() * 10) + 1
+    const res = H(g, rand, prime)
+
+    const s1 = s(g, rand, prime)
+    const x1Input0 = Array.from(new Array(rand)).map(x => null)
+    x1Input0[0] = 0
+    const x1Input1 = Array.from(new Array(rand)).map(x => null)
+    x1Input1[0] = 1
+    // console.log('X1INPUTS', x1Input0, x1Input1)
+    // console.log(res, summation)
+    // console.log('S10', s1(x1Input0))
+    // console.log('S11', s1(x1Input1))
+    // console.log(res)
+    assert(res.cmp(s1(x1Input0).add(s1(x1Input1)).umod(new BN(prime))) === 0)
+  })
+  it('should simulate sum-check protocol', function () {
+    console.log('TODO')
   })
   // describe('DAG', function () {
   //   it('should create a DAG from a tree', function () {
@@ -106,7 +155,5 @@ describe('Chapter 4', function () {
   //     // console.log(JSON.stringify(dag, null, 2))
   //   })
   // })
-  describe('full sum-check', function () {
-
-  })
+  describe('full sum-check', function () {})
 })
