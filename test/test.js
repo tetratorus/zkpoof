@@ -235,13 +235,37 @@ describe('Chapter 4', function () {
         .cmp(g5(x(r5)).umod(new BN(prime))) === 0
     )
   })
-  it.only('should construct boolean circuit from a tree', function () {
+  it('should construct boolean circuit from a tree', function () {
     const booleanCircuit = new BooleanCircuit({
       root: { // binary tree root
         o: 'AND', // operator
         l: { // left
           o: 'NOT',
           r: { // right
+            o: 'OR',
+            l: {}, // node 4
+            r: {
+              o: 'NOT',
+              l: {} // node 6
+            }
+          }
+        },
+        r: {} // node 2
+      }
+    })
+    // console.log(JSON.stringify(booleanCircuit, null, 2))
+    assert(booleanCircuit.maxDepth === 5)
+    assert(booleanCircuit.nodes[0].children[0] === 1)
+    assert(booleanCircuit.nodes[0].children[1] === 2)
+    assert.deepStrictEqual(booleanCircuit.inputs, [2, 4, 6])
+  })
+  it.only('should evaluate boolean circuit', function () {
+    const booleanCircuit = new BooleanCircuit({
+      root: {
+        o: 'AND',
+        l: {
+          o: 'NOT',
+          r: {
             o: 'OR',
             l: {},
             r: {
@@ -253,10 +277,9 @@ describe('Chapter 4', function () {
         r: {}
       }
     })
-    console.log(booleanCircuit)
-    assert(booleanCircuit.maxDepth === 5)
-    assert(booleanCircuit.nodes[0].children[0] === 1)
-    assert(booleanCircuit.nodes[0].children[1] === 2)
-    assert.deepStrictEqual(booleanCircuit.leafs, [2, 4, 6])
+    assert(booleanCircuit.evaluate([1, 0, 1]) === 1)
+    assert(booleanCircuit.evaluate([0, 0, 0]) === 0)
+    assert(booleanCircuit.evaluate([1, 1, 1]) === 0)
+    assert(booleanCircuit.evaluate([1, 0, 0]) === 0)
   })
 })
