@@ -259,7 +259,7 @@ describe('Chapter 4', function () {
     assert(booleanCircuit.nodes[0].children[1] === 2)
     assert.deepStrictEqual(booleanCircuit.inputs, [2, 4, 6])
   })
-  it.only('should evaluate boolean circuit', function () {
+  it('should evaluate boolean circuit', function () {
     const booleanCircuit = new BooleanCircuit({
       root: {
         o: 'AND',
