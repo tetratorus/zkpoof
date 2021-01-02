@@ -45,9 +45,16 @@ class BooleanCircuit {
         currentIndex++
         children.push(currentIndex)
       }
+      if (!currentNode.r && !currentNode.l) {
+        this.leafs.push(nodeIndex)
+      }
       this.nodes[nodeIndex] = new BooleanCircuitNode(currentParent, children, currentNode.o, nodeIndex)
       nodeIndex++
     }
+  }
+
+  evaluate (inputs) {
+
   }
 }
 

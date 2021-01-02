@@ -254,5 +254,9 @@ describe('Chapter 4', function () {
       }
     })
     console.log(booleanCircuit)
+    assert(booleanCircuit.maxDepth === 5)
+    assert(booleanCircuit.nodes[0].children[0] === 1)
+    assert(booleanCircuit.nodes[0].children[1] === 2)
+    assert.deepStrictEqual(booleanCircuit.leafs, [2, 4, 6])
   })
 })
