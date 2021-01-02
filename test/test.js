@@ -3,8 +3,9 @@ const BN = require('bn.js')
 const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
 const { multilinearExtension } = require('../src/mle')
-// const { getDAG } = require('../src/boolean')
+// const { getDAG } = require('../src/circuit')
 const { H, s, x, vecFill } = require('../src/sumcheck')
+const { BooleanCircuit } = require('../src/circuit')
 const ec = utils.ec
 describe('Basic', function () {
   describe('utils', function () {
@@ -233,5 +234,25 @@ describe('Chapter 4', function () {
         .umod(new BN(prime))
         .cmp(g5(x(r5)).umod(new BN(prime))) === 0
     )
+  })
+  it.only('should construct boolean circuit from a tree', function () {
+    const booleanCircuit = new BooleanCircuit({
+      root: { // binary tree root
+        o: 'AND', // operator
+        l: { // left
+          o: 'NOT',
+          r: { // right
+            o: 'OR',
+            l: {},
+            r: {
+              o: 'NOT',
+              l: {}
+            }
+          }
+        },
+        r: {}
+      }
+    })
+    console.log(booleanCircuit)
   })
 })
