@@ -128,7 +128,7 @@ describe('Chapter 4', function () {
     const res = H(g, rand, prime)
 
     const s1 = s(g, rand, prime)
-    assert(res.cmp(s1(vecFill(rand, x(0))).add(s1(vecFill(rand, x(1)))).umod(new BN(prime))) === 0)
+    assert(res.cmp(s1(vecFill(rand, x(0), true)).add(s1(vecFill(rand, x(1), true))).umod(new BN(prime))) === 0)
   })
   it('should simulate sum-check protocol', function () {
     const prime = Math.floor(Math.random() * 100000)
