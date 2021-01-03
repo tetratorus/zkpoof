@@ -3,9 +3,8 @@ const BN = require('bn.js')
 const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
 const { multilinearExtension } = require('../src/mle')
-// const { getDAG } = require('../src/circuit')
 const { H, s, x, vecFill } = require('../src/sumcheck')
-const { BooleanCircuit } = require('../src/circuit')
+const { BooleanFormula } = require('../src/circuit')
 const ec = utils.ec
 describe('Basic', function () {
   describe('utils', function () {
@@ -235,8 +234,8 @@ describe('Chapter 4', function () {
         .cmp(g5(x(r5)).umod(new BN(prime))) === 0
     )
   })
-  it('should construct boolean circuit from a tree', function () {
-    const booleanCircuit = new BooleanCircuit({
+  it('should construct boolean formula from a tree', function () {
+    const booleanFormula = new BooleanFormula({
       root: { // binary tree root
         o: 'AND', // operator
         l: { // left
@@ -253,14 +252,14 @@ describe('Chapter 4', function () {
         r: {} // node 2
       }
     })
-    // console.log(JSON.stringify(booleanCircuit, null, 2))
-    assert(booleanCircuit.maxDepth === 5)
-    assert(booleanCircuit.nodes[0].children[0] === 1)
-    assert(booleanCircuit.nodes[0].children[1] === 2)
-    assert.deepStrictEqual(booleanCircuit.inputs, [2, 4, 6])
+    // console.log(JSON.stringify(booleanFormula, null, 2))
+    assert(booleanFormula.maxDepth === 5)
+    assert(booleanFormula.nodes[0].children[0] === 1)
+    assert(booleanFormula.nodes[0].children[1] === 2)
+    assert.deepStrictEqual(booleanFormula.inputs, [2, 4, 6])
   })
-  it('should evaluate boolean circuit', function () {
-    const booleanCircuit = new BooleanCircuit({
+  it('should evaluate boolean formula', function () {
+    const booleanFormula = new BooleanFormula({
       root: {
         o: 'AND',
         l: {
@@ -277,9 +276,44 @@ describe('Chapter 4', function () {
         r: {}
       }
     })
-    assert(booleanCircuit.evaluate([1, 0, 1]) === 1)
-    assert(booleanCircuit.evaluate([0, 0, 0]) === 0)
-    assert(booleanCircuit.evaluate([1, 1, 1]) === 0)
-    assert(booleanCircuit.evaluate([1, 0, 0]) === 0)
+    assert(booleanFormula.evaluate([1, 0, 1]) === 1)
+    assert(booleanFormula.evaluate([0, 0, 0]) === 0)
+    assert(booleanFormula.evaluate([1, 1, 1]) === 0)
+    assert(booleanFormula.evaluate([1, 0, 0]) === 0)
+  })
+  it('should convert boolean formula to arithmetic circuit', function () {
+    const booleanFormula = new BooleanFormula({
+      root: {
+        o: 'AND',
+        l: {
+          o: 'NOT',
+          r: {
+            o: 'OR',
+            l: {},
+            r: {
+              o: 'NOT',
+              l: {}
+            }
+          }
+        },
+        r: {}
+      }
+    })
+    const arithmeticCircuit = booleanFormula.toArithmeticCircuit()
+    const testCases = [
+      [0, 0, 0],
+      [0, 0, 1],
+      [0, 1, 0],
+      [0, 1, 1],
+      [1, 0, 0],
+      [1, 0, 1],
+      [1, 1, 0],
+      [1, 1, 1]
+    ]
+
+    for (let i = 0; i < testCases.length; i++) {
+      const testCase = testCases[i]
+      assert.strictEqual(arithmeticCircuit.evaluate(testCase), booleanFormula.evaluate(testCase))
+    }
   })
 })
