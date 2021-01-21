@@ -34,5 +34,6 @@ function Xw (w, x, V) {
 // TODO: memoization, O(n) instead of O(n log n)
 
 module.exports = {
+  bnToBoolArr,
   multilinearExtension
 }

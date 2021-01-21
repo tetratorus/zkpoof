@@ -2,9 +2,10 @@ const assert = require('assert')
 const BN = require('bn.js')
 const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
-const { multilinearExtension } = require('../src/mle')
+const { bnToBoolArr, multilinearExtension } = require('../src/mle')
 const { H, s, x, vecFill } = require('../src/sumcheck')
 const { BooleanFormula } = require('../src/circuit')
+const { matrixMultiply, matrixGen } = require('../src/matmult')
 const ec = utils.ec
 describe('Basic', function () {
   describe('utils', function () {
@@ -315,5 +316,33 @@ describe('Chapter 4', function () {
       const testCase = testCases[i]
       assert.strictEqual(arithmeticCircuit.evaluate(testCase), booleanFormula.evaluate(testCase))
     }
+  })
+  it('should matrix multiply normally', function () {
+    const Amatrix = matrixGen(5)
+    const Bmatrix = matrixGen(5)
+    const Cmatrix = matrixMultiply(Amatrix, Bmatrix)
+    assert.strictEqual(Cmatrix.length, 5)
+    Cmatrix.forEach(row => {
+      assert.strictEqual(row.length, 5)
+    })
+  })
+  it.only('should simulate MATMULT', function () {
+    const n = 16
+    const Amatrix = matrixGen(n)
+    // const Bmatrix = matrixGen(n)
+    function genF(matrix) {
+      return function (xBoolArr, yBoolArr) {
+        const x = new BN(xBoolArr.join(''), 2).toNumber()
+        const y = new BN(yBoolArr.join(''), 2).toNumber()
+        return matrix[y][x]
+      }
+    }
+    const fA = genF(Amatrix)
+    // const fB = genF(Bmatrix)
+    const rand1 = new BN(Math.floor(Math.random() * 16))
+    const randBoolArr1 = bnToBoolArr(rand1, Math.log2(n))
+    const rand2 = new BN(Math.floor(Math.random() * 16))
+    const randBoolArr2 = bnToBoolArr(rand2, Math.log2(n))
+    assert.strictEqual(fA(randBoolArr1, randBoolArr2).cmp(Amatrix[rand2.toNumber()][rand1.toNumber()]), 0)
   })
 })
