@@ -1,5 +1,61 @@
 // boolean formula
 
+function extendedInputNode (layerDepth) {
+  const node = {}
+  let currNodeRef = node
+  for (let i = 0; i < layerDepth; i++) {
+    currNodeRef.o = 'IS'
+    currNodeRef.l = {}
+    currNodeRef = currNodeRef.l
+  }
+  return node
+}
+
+function layeredBinaryTree (binaryTree, requiredDepth, compensateOR = false) {
+  const queue = []
+  const depth = []
+  const parentRef = []
+  const ORcount = []
+
+  queue.push(binaryTree.root)
+  depth.push(1)
+  parentRef.push({})
+  ORcount.push(0)
+  while (queue.length > 0) {
+    const currentNode = queue.shift()
+    const currentDepth = depth.shift()
+    const currentParent = parentRef.shift()
+    const currentORcount = ORcount.shift()
+
+    // find input nodes and extend them
+    if (!currentNode.r && !currentNode.l) {
+      let side = 'l'
+      if (currentParent.l !== currentNode) {
+        side = 'r'
+      }
+      let ORcompensation = 0
+      if (compensateOR) ORcompensation = currentORcount
+      currentParent[side] = extendedInputNode(requiredDepth - currentDepth - ORcompensation)
+    } else {
+      if (currentNode.l) {
+        queue.push(currentNode.l)
+        depth.push(currentDepth + 1)
+        parentRef.push(currentNode)
+        currentNode.o === 'OR' ? ORcount.push(currentORcount + 1) : ORcount.push(currentORcount)
+      }
+
+      if (currentNode.r) {
+        queue.push(currentNode.r)
+        depth.push(currentDepth + 1)
+        parentRef.push(currentNode)
+        currentNode.o === 'OR' ? ORcount.push(currentORcount + 1) : ORcount.push(currentORcount)
+      }
+    }
+  }
+
+  return binaryTree
+}
+
 class BooleanFormulaNode {
   constructor (parentIndex, children, operator, index, tag) {
     this.parent = parentIndex
@@ -13,30 +69,40 @@ class BooleanFormulaNode {
 }
 class BooleanFormula {
   constructor (binaryTree) {
+    this.binaryTree = JSON.parse(JSON.stringify(binaryTree)) // deep copy
     this.nodes = {}
     this.inputs = []
     this.maxDepth = 0
+    this.acMaxDepth = 0
     const queue = []
     const depth = []
+    const acDepth = []
     const parent = []
     const indexes = []
     let nextNodeIndex = 1
     queue.push(binaryTree.root)
     depth.push(1)
+    acDepth.push(1)
     parent.push(-1)
     indexes.push(0)
     while (queue.length > 0) {
       const currentNode = queue.shift()
       const currentDepth = depth.shift()
+      const currentACDepth = acDepth.shift()
       const currentParent = parent.shift()
       const currentIndex = indexes.shift()
       if (currentDepth > this.maxDepth) {
         this.maxDepth = currentDepth
       }
+      if (currentACDepth > this.acMaxDepth) {
+        this.acMaxDepth = currentACDepth
+      }
       const children = []
       if (currentNode.l) {
         queue.push(currentNode.l)
         depth.push(currentDepth + 1)
+        currentNode.l.o === 'OR' ? acDepth.push(currentACDepth + 2) : acDepth.push(currentACDepth + 1)
+        // acDepth.push(currentACDepth + 1)
         parent.push(currentIndex)
         children.push(nextNodeIndex)
         indexes.push(nextNodeIndex)
@@ -45,6 +111,8 @@ class BooleanFormula {
       if (currentNode.r) {
         queue.push(currentNode.r)
         depth.push(currentDepth + 1)
+        currentNode.r.o === 'OR' ? acDepth.push(currentACDepth + 2) : acDepth.push(currentACDepth + 1)
+        // acDepth.push(currentACDepth + 1)
         parent.push(currentIndex)
         children.push(nextNodeIndex)
         indexes.push(nextNodeIndex)
@@ -158,7 +226,10 @@ class BooleanFormula {
     return this.nodes[0].val
   }
 
-  toArithmeticCircuit (removeIS = false) {
+  toArithmeticCircuit (layered = false) {
+    if (layered) {
+      return new BooleanFormula(layeredBinaryTree(this.binaryTree, this.acMaxDepth, true)).toArithmeticCircuit()
+    }
     const queue = []
     const parents = []
     const indexes = []
@@ -183,24 +254,24 @@ class BooleanFormula {
         ac.inputs.push(currentIndex)
         ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [], '_', currentIndex, currentNode.tag)
       } else if (currentNode.operator === 'IS') { // for layered form
-        if (!removeIS) {
-          ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex], '=', currentIndex, currentNode.tag)
-          queue.push(this.nodes[currentNode.children[0]])
-          parents.push([currentIndex])
-          indexes.push(nextNodeIndex)
-          depth.push(currentDepth + 1)
-          nextNodeIndex++
-        } else {
-          // 1.x
-          ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex, nextNodeIndex + 1], '*', currentIndex, currentNode.tag)
-          ac.nodes[nextNodeIndex] = new ArithmeticCircuitNode([currentIndex], [], '1', nextNodeIndex, 'one')
-          nextNodeIndex++
-          queue.push(this.nodes[currentNode.children[0]])
-          parents.push([currentIndex])
-          indexes.push(nextNodeIndex)
-          depth.push(currentDepth + 1)
-          nextNodeIndex++
-        }
+        // if (!layered) {
+        //   ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex], '=', currentIndex, currentNode.tag)
+        //   queue.push(this.nodes[currentNode.children[0]])
+        //   parents.push([currentIndex])
+        //   indexes.push(nextNodeIndex)
+        //   depth.push(currentDepth + 1)
+        //   nextNodeIndex++
+        // } else {
+        // 1.x
+        ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex, nextNodeIndex + 1], '*', currentIndex, currentNode.tag)
+        ac.nodes[nextNodeIndex] = new ArithmeticCircuitNode([currentIndex], [], '1', nextNodeIndex, 'one')
+        nextNodeIndex++
+        queue.push(this.nodes[currentNode.children[0]])
+        parents.push([currentIndex])
+        indexes.push(nextNodeIndex)
+        depth.push(currentDepth + 1)
+        nextNodeIndex++
+        // }
       } else if (currentNode.operator === 'NOT') {
         // 1 - y
         ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex, nextNodeIndex + 1], '-', currentIndex, currentNode.tag)
@@ -372,5 +443,7 @@ class ArithmeticCircuit {
 
 module.exports = {
   BooleanFormula,
-  ArithmeticCircuit
+  ArithmeticCircuit,
+  layeredBinaryTree,
+  extendedInputNode
 }

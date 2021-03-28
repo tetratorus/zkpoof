@@ -5,7 +5,7 @@ const { Hash, stringToCoefficients } = require('../src/hash')
 // const { bnToBoolArr, multilinearExtension } = require('../src/mle')
 const { multilinearExtension } = require('../src/mle')
 const { H, s, x, vecFill } = require('../src/sumcheck')
-const { BooleanFormula } = require('../src/circuit')
+const { layeredBinaryTree, BooleanFormula } = require('../src/circuit')
 const { matrixMultiply, matrixGen } = require('../src/matmult')
 const ec = utils.ec
 describe('Basic', function () {
@@ -283,7 +283,7 @@ describe('Chapter 4', function () {
     assert(booleanFormula.evaluate([1, 1, 1]) === 0)
     assert(booleanFormula.evaluate([1, 0, 0]) === 0)
   })
-  it.only('should convert boolean formula to arithmetic circuit', function () {
+  it('should convert boolean formula to arithmetic circuit', function () {
     const booleanFormula = new BooleanFormula({
       root: {
         o: 'AND',
@@ -302,7 +302,6 @@ describe('Chapter 4', function () {
       }
     })
     const arithmeticCircuit = booleanFormula.toArithmeticCircuit()
-    const arithmeticCircuitNoIS = booleanFormula.toArithmeticCircuit(true)
     const testCases = [
       [0, 0, 0],
       [0, 0, 1],
@@ -317,8 +316,61 @@ describe('Chapter 4', function () {
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i]
       assert.strictEqual(arithmeticCircuit.evaluate(testCase), booleanFormula.evaluate(testCase))
-      assert.strictEqual(arithmeticCircuitNoIS.evaluate(testCase), booleanFormula.evaluate(testCase))
     }
+  })
+  it('should convert binary tree to layered binary tree', function () {
+    const bt = layeredBinaryTree({
+      root: {
+        o: 'AND',
+        l: {
+          o: 'NOT',
+          r: {
+            o: 'OR',
+            l: {},
+            r: {
+              o: 'NOT',
+              l: {}
+            }
+          }
+        },
+        r: {}
+      }
+    }, 5)
+    // console.log(JSON.stringify(bt, null, 4))
+    assert(bt.root.r.l.l.l !== undefined)
+    // console.log(new BooleanFormula(bt))
+  })
+  it.only('should convert boolean formula to a layered arithmetic circuit', function () {
+    const booleanFormula = new BooleanFormula({
+      root: {
+        o: 'AND',
+        l: {
+          o: 'NOT',
+          r: {
+            o: 'OR',
+            l: {},
+            r: {
+              o: 'NOT',
+              l: {}
+            }
+          }
+        },
+        r: {}
+      }
+    })
+
+    const layeredArithmeticCircuit = booleanFormula.toArithmeticCircuit(true)
+    const inputDepths = {}
+    layeredArithmeticCircuit.inputs.forEach((inputIndex) => {
+      let currNode = layeredArithmeticCircuit.nodes[inputIndex]
+      let depth = 1
+      while (currNode !== layeredArithmeticCircuit.nodes[0]) {
+        currNode = layeredArithmeticCircuit.nodes[currNode.parents[0]]
+        depth++
+      }
+      inputDepths[depth] = inputDepths[depth] ? inputDepths[depth] + 1 : 1
+    })
+    assert.strictEqual(Object.keys(inputDepths).length, 1)
   })
   it('should matrix multiply normally', function () {
     const Amatrix = matrixGen(5)
