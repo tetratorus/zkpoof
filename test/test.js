@@ -329,20 +329,24 @@ describe('Chapter 4', function () {
   it.only('should simulate MATMULT', function () {
     const n = 16
     const Amatrix = matrixGen(n)
-    // const Bmatrix = matrixGen(n)
-    function genF(matrix) {
-      return function (xBoolArr, yBoolArr) {
+    const Bmatrix = matrixGen(n)
+    function genF (matrix) {
+      return function (boolArr) {
+        const xBoolArr = boolArr.slice(0, boolArr.length / 2)
+        const yBoolArr = boolArr.slice(boolArr.length / 2)
         const x = new BN(xBoolArr.join(''), 2).toNumber()
         const y = new BN(yBoolArr.join(''), 2).toNumber()
         return matrix[y][x]
       }
     }
     const fA = genF(Amatrix)
-    // const fB = genF(Bmatrix)
+    const fB = genF(Bmatrix)
     const rand1 = new BN(Math.floor(Math.random() * 16))
     const randBoolArr1 = bnToBoolArr(rand1, Math.log2(n))
     const rand2 = new BN(Math.floor(Math.random() * 16))
     const randBoolArr2 = bnToBoolArr(rand2, Math.log2(n))
-    assert.strictEqual(fA(randBoolArr1, randBoolArr2).cmp(Amatrix[rand2.toNumber()][rand1.toNumber()]), 0)
+    assert.strictEqual(fA(randBoolArr1.concat(randBoolArr2)).cmp(Amatrix[rand2.toNumber()][rand1.toNumber()]), 0)
+    const fATilda = multilinearExtension(fA, Math.log2(n) * 2)
+    assert.strictEqual(fA(randBoolArr1.concat(randBoolArr2)).cmp(fATilda(randBoolArr1.concat(randBoolArr2))), 0)
   })
 })

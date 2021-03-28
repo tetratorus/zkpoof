@@ -14,6 +14,7 @@ function matrixMultiply (A, B, { prime } = {}) {
 
   function getCol (matrix, num) {
     const c = []
+    // TODO: cache this
     for (let i = 0; i < matrix.length; i++) {
       c.push(matrix[i][num])
     }
