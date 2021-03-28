@@ -158,7 +158,7 @@ class BooleanFormula {
     return this.nodes[0].val
   }
 
-  toArithmeticCircuit () {
+  toArithmeticCircuit (removeIS = false) {
     const queue = []
     const parents = []
     const indexes = []
@@ -183,15 +183,27 @@ class BooleanFormula {
         ac.inputs.push(currentIndex)
         ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [], '_', currentIndex, currentNode.tag)
       } else if (currentNode.operator === 'IS') { // for layered form
-        ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex], '=', currentIndex, currentNode.tag)
-        queue.push(this.nodes[currentNode.children[0]])
-        parents.push([currentIndex])
-        indexes.push(nextNodeIndex)
-        depth.push(currentDepth + 1)
-        nextNodeIndex++
+        if (!removeIS) {
+          ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex], '=', currentIndex, currentNode.tag)
+          queue.push(this.nodes[currentNode.children[0]])
+          parents.push([currentIndex])
+          indexes.push(nextNodeIndex)
+          depth.push(currentDepth + 1)
+          nextNodeIndex++
+        } else {
+          // 1.x
+          ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex, nextNodeIndex + 1], '*', currentIndex, currentNode.tag)
+          ac.nodes[nextNodeIndex] = new ArithmeticCircuitNode([currentIndex], [], '1', nextNodeIndex, 'one')
+          nextNodeIndex++
+          queue.push(this.nodes[currentNode.children[0]])
+          parents.push([currentIndex])
+          indexes.push(nextNodeIndex)
+          depth.push(currentDepth + 1)
+          nextNodeIndex++
+        }
       } else if (currentNode.operator === 'NOT') {
-        ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex, nextNodeIndex + 1], '-', currentIndex, currentNode.tag)
         // 1 - y
+        ac.nodes[currentIndex] = new ArithmeticCircuitNode(currentParents, [nextNodeIndex, nextNodeIndex + 1], '-', currentIndex, currentNode.tag)
         ac.nodes[nextNodeIndex] = new ArithmeticCircuitNode([currentIndex], [], '1', nextNodeIndex, 'one')
         nextNodeIndex++
         queue.push(this.nodes[currentNode.children[0]])

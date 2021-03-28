@@ -2,7 +2,8 @@ const assert = require('assert')
 const BN = require('bn.js')
 const utils = require('../src/utils')
 const { Hash, stringToCoefficients } = require('../src/hash')
-const { bnToBoolArr, multilinearExtension } = require('../src/mle')
+// const { bnToBoolArr, multilinearExtension } = require('../src/mle')
+const { multilinearExtension } = require('../src/mle')
 const { H, s, x, vecFill } = require('../src/sumcheck')
 const { BooleanFormula } = require('../src/circuit')
 const { matrixMultiply, matrixGen } = require('../src/matmult')
@@ -282,7 +283,7 @@ describe('Chapter 4', function () {
     assert(booleanFormula.evaluate([1, 1, 1]) === 0)
     assert(booleanFormula.evaluate([1, 0, 0]) === 0)
   })
-  it('should convert boolean formula to arithmetic circuit', function () {
+  it.only('should convert boolean formula to arithmetic circuit', function () {
     const booleanFormula = new BooleanFormula({
       root: {
         o: 'AND',
@@ -301,6 +302,7 @@ describe('Chapter 4', function () {
       }
     })
     const arithmeticCircuit = booleanFormula.toArithmeticCircuit()
+    const arithmeticCircuitNoIS = booleanFormula.toArithmeticCircuit(true)
     const testCases = [
       [0, 0, 0],
       [0, 0, 1],
@@ -315,6 +317,7 @@ describe('Chapter 4', function () {
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i]
       assert.strictEqual(arithmeticCircuit.evaluate(testCase), booleanFormula.evaluate(testCase))
+      assert.strictEqual(arithmeticCircuitNoIS.evaluate(testCase), booleanFormula.evaluate(testCase))
     }
   })
   it('should matrix multiply normally', function () {
@@ -326,27 +329,28 @@ describe('Chapter 4', function () {
       assert.strictEqual(row.length, 5)
     })
   })
-  it.only('should simulate MATMULT', function () {
-    const n = 16
-    const Amatrix = matrixGen(n)
-    const Bmatrix = matrixGen(n)
-    function genF (matrix) {
-      return function (boolArr) {
-        const xBoolArr = boolArr.slice(0, boolArr.length / 2)
-        const yBoolArr = boolArr.slice(boolArr.length / 2)
-        const x = new BN(xBoolArr.join(''), 2).toNumber()
-        const y = new BN(yBoolArr.join(''), 2).toNumber()
-        return matrix[y][x]
-      }
-    }
-    const fA = genF(Amatrix)
-    const fB = genF(Bmatrix)
-    const rand1 = new BN(Math.floor(Math.random() * 16))
-    const randBoolArr1 = bnToBoolArr(rand1, Math.log2(n))
-    const rand2 = new BN(Math.floor(Math.random() * 16))
-    const randBoolArr2 = bnToBoolArr(rand2, Math.log2(n))
-    assert.strictEqual(fA(randBoolArr1.concat(randBoolArr2)).cmp(Amatrix[rand2.toNumber()][rand1.toNumber()]), 0)
-    const fATilda = multilinearExtension(fA, Math.log2(n) * 2)
-    assert.strictEqual(fA(randBoolArr1.concat(randBoolArr2)).cmp(fATilda(randBoolArr1.concat(randBoolArr2))), 0)
-  })
+  // it('should simulate MATMULT', function () {
+  //   const n = 16
+  //   const Amatrix = matrixGen(n)
+  //   const Bmatrix = matrixGen(n)
+  //   function genF (matrix) {
+  //     return function (boolArr) {
+  //       const xBoolArr = boolArr.slice(0, boolArr.length / 2)
+  //       const yBoolArr = boolArr.slice(boolArr.length / 2)
+  //       const x = new BN(xBoolArr.join(''), 2).toNumber()
+  //       const y = new BN(yBoolArr.join(''), 2).toNumber()
+  //       return matrix[y][x]
+  //     }
+  //   }
+  //   const fA = genF(Amatrix)
+  //   const fB = genF(Bmatrix)
+  //   const rand1 = new BN(Math.floor(Math.random() * 16))
+  //   const randBoolArr1 = bnToBoolArr(rand1, Math.log2(n))
+  //   const rand2 = new BN(Math.floor(Math.random() * 16))
+  //   const randBoolArr2 = bnToBoolArr(rand2, Math.log2(n))
+  //   assert.strictEqual(fA(randBoolArr1.concat(randBoolArr2)).cmp(Amatrix[rand2.toNumber()][rand1.toNumber()]), 0)
+  //   const fATilda = multilinearExtension(fA, Math.log2(n) * 2)
+  //   assert.strictEqual(fA(randBoolArr1.concat(randBoolArr2)).cmp(fATilda(randBoolArr1.concat(randBoolArr2))), 0)
+  //   // TODO: complete fC
+  // })
 })
